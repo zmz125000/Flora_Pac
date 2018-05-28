@@ -10,6 +10,7 @@ import math
 import socket
 import struct
 from jsmin import jsmin
+from datetime import date
 
 
 def ip2long(ip):
@@ -73,9 +74,14 @@ def generate_pac(proxy, iproxy):
 
 
 
+#get yy-mm-dd
+	datetimestr = str(date.today())
+	
+	strLines = """// Last Modified: """ + datetimestr + """
+	"""
+	
 
-
-    strLines = """
+    strLines = strLines + """
     var hasOwnProperty = Object.hasOwnProperty;
     var iproxy ='%s';
     var out_gfw_proxy = '%s';
@@ -3176,7 +3182,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Generate proxy auto-config rules.")
     parser.add_argument('-x', '--proxy',
                         dest    = 'proxy',
-                        default = 'SOCKS5 127.0.0.1:8964; SOCKS 127.0.0.1:8964; DIRECT',
+                        default = 'SOCKS5 127.0.0.1:1080',
                         nargs   = '?',
                         help    = "Proxy Server, examples: "
                                   "SOCKS5 127.0.0.1:8964; "
