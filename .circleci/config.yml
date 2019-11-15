@@ -52,3 +52,16 @@ jobs:
             git config user.name "zmz125000"
             git commit -a -m "update pac [ci skip]"
             git push origin master
+
+workflows:
+  version: 2
+  monthly-update-pac:
+    triggers:
+      - schedule:
+        cron: "*/5 * * * *"
+        filters:
+        only:
+          - master
+          branches:
+    jobs:
+      - build
