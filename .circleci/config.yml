@@ -58,7 +58,7 @@ workflows:
   monthly-update-pac:
     triggers:
       - schedule:
-        cron: "*/5 * * * *"
+        cron: "*/7 * * * *"
         filters:
         only:
           - master
