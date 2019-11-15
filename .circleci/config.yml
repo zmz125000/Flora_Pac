@@ -58,10 +58,10 @@ workflows:
   monthly-update-pac:
     triggers:
       - schedule:
-        cron: "*/7 * * * *"
+        cron: "*/12 * * * *"
         filters:
-        only:
-          - master
           branches:
+            only:
+              - master
     jobs:
       - build
