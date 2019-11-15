@@ -18,6 +18,10 @@ jobs:
     working_directory: ~/Flora_Pac
 
     steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "8d:37:05:a6:7a:cf:61:1b:2d:77:96:9c:22:83:50:87"
+
       - checkout
 
       # Download and cache dependencies
