@@ -1,4 +1,4 @@
-// Last Modified: 2019-11-15
+// Last Modified: 2019-11-15 18:10:09.192115
 	
     var hasOwnProperty = Object.hasOwnProperty;
     var iproxy ='SOCKS5 127.0.0.1:1080';
@@ -11926,7 +11926,7 @@
         return 'DIRECT';
     };
 
-    
+
     var strIp = dnsResolve(host);
     if (!strIp) {
         return out_gfw_proxy ; // arg out_gfw_proxy

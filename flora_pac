@@ -9,11 +9,11 @@ import urllib.error
 import urllib.parse
 import argparse
 import math
+import datetime
 import socket
 import struct
 from shutil import move
 from jsmin import jsmin
-from datetime import date
 from os import fdopen, remove
 from tempfile import mkstemp
 
@@ -77,7 +77,7 @@ def generate_pac(proxy, iproxy):
 
 
 # get yy-mm-dd
-        datetimestr = str(date.today())
+        datetimestr = str(datetime.datetime.now())
 
         strLines = """// Last Modified: """ + datetimestr + """
 	"""
@@ -3023,7 +3023,7 @@ def generate_pac(proxy, iproxy):
         return 'DIRECT';
     };
 
-    
+
     var strIp = dnsResolve(host);
     if (!strIp) {
         return out_gfw_proxy ; // arg out_gfw_proxy
@@ -3077,7 +3077,7 @@ def create_additional_pac():
         for line in file:
             if 'out_gfw_proxy' in line:
                 match = re.search('\'(.+?)\'', line)
-                if match is not None:
+                if match:
                     orig_proxy = match.group(0)
             else:
                 continue
@@ -3086,7 +3086,7 @@ def create_additional_pac():
         for line in file:
             if 'iproxy' in line:
                 match = re.search('\'(.+?)\'', line)
-                if match is not None:
+                if match:
                     orig_iproxy = match.group(0)
             else:
                 continue
@@ -3098,6 +3098,10 @@ def create_additional_pac():
         with open('flora_pac.pac') as old_file:
             for line in old_file:
                 if 'var out_gfw_proxy' in line:
+                    proxy = ''
+                    match = re.search(r'(?:\')(\S+)(?:\s)', line)
+                    if match:
+                        proxy = match.group(1)
                     new_file.write(line.replace('SOCKS5', 'PROXY'))
                 else:
                     new_file.write(line)
@@ -3105,14 +3109,14 @@ def create_additional_pac():
     move(abs_path, 'flora_pac_http.pac')
 
     # create flora_pac_reverse.pac
-    fh, abs_path = mkstemp()
+    fh, abs_path=mkstemp()
     with fdopen(fh, 'w') as new_file:
         with open('flora_pac.pac') as old_file:
             for line in old_file:
                 if 'var out_gfw_proxy' in line:
                     new_file.write(line.replace(orig_proxy, orig_iproxy))
                     continue
-                if 'var iproxy' in line:
+                elif 'var iproxy' in line:
                     new_file.write(line.replace(orig_iproxy, orig_proxy))
                     continue
                 else:
@@ -3130,16 +3134,16 @@ def pac_server(port):
     class DefaultHandler(http.server.SimpleHTTPRequestHandler):
         def do_GET(self):
             if self.path == '/':
-                self.path = '/flora_pac.pac'
+                self.path='/flora_pac.pac'
             return http.server.SimpleHTTPRequestHandler.do_GET(self)
-    httpd = http.server.HTTPServer(('0.0.0.0', port), DefaultHandler)
+    httpd=http.server.HTTPServer(('0.0.0.0', port), DefaultHandler)
     print("PAC is now serving at: 0.0.0.0:%d" % (port))
     print("Check it out with: $ curl http://127.0.0.1:%d" % (port))
     httpd.serve_forever()
 
 
 def fake_ip_data():
-    fakeIps = [
+    fakeIps=[
         '74.125.127.102',
         '74.125.155.102',
         '74.125.39.102',
@@ -3180,7 +3184,7 @@ def fake_ip_data():
         '93.46.8.89'
     ]
 
-    fake_ip_int = []
+    fake_ip_int=[]
     for item in fakeIps:
         fake_ip_int.append((ip2long(item), ip2long('255.255.255.255')))
     return fake_ip_int
@@ -3189,43 +3193,43 @@ def fake_ip_data():
 def fetch_ip_data():
     # fetch data from apnic
     print("Fetching data from apnic.net, it might take a few minutes, please wait...")
-    url = r'http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest'
-    data = urllib.request.urlopen(url).read().decode('utf-8')
-    #f = open("ip.txt")
-    #data = f.read()
+    url=r'http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest'
+    data=urllib.request.urlopen(url).read().decode('utf-8')
+    # f = open("ip.txt")
+    # data = f.read()
 
-    cnregex = re.compile(
+    cnregex=re.compile(
         r'apnic\|cn\|ipv4\|[0-9\.]+\|[0-9]+\|[0-9]+\|a.*', re.IGNORECASE)
-    cndata = cnregex.findall(data)
+    cndata=cnregex.findall(data)
 
-    results = []
-    prev_net = ''
+    results=[]
+    prev_net=''
 
     for item in cndata:
-        unit_items = item.split('|')
-        starting_ip = unit_items[3]
-        num_ip = int(unit_items[4])
+        unit_items=item.split('|')
+        starting_ip=unit_items[3]
+        num_ip=int(unit_items[4])
 
-        imask = 0xffffffff ^ (num_ip-1)
+        imask=0xffffffff ^ (num_ip-1)
         # convert to string
-        imask = hex(imask)[2:]
-        mask = [0]*4
-        mask[0] = imask[0:2]
-        mask[1] = imask[2:4]
-        mask[2] = imask[4:6]
-        mask[3] = imask[6:8]
+        imask=hex(imask)[2:]
+        mask=[0]*4
+        mask[0]=imask[0:2]
+        mask[1]=imask[2:4]
+        mask[2]=imask[4:6]
+        mask[3]=imask[6:8]
 
         # convert str to int
-        mask = [int(i, 16) for i in mask]
-        mask = "%d.%d.%d.%d" % tuple(mask)
+        mask=[int(i, 16) for i in mask]
+        mask="%d.%d.%d.%d" % tuple(mask)
 
         # mask in *nix format
-        mask2 = 32-int(math.log(num_ip, 2))
+        mask2=32-int(math.log(num_ip, 2))
 
-        ip = starting_ip.split('.')
-        #ip[2] = '0'
-        #ip[3] = '0'
-        starting_ip = '.'.join(ip)
+        ip=starting_ip.split('.')
+        # ip[2] = '0'
+        # ip[3] = '0'
+        starting_ip='.'.join(ip)
         # if starting_ip != prev_net:
         results.append((ip2long(starting_ip), ip2long(mask), mask2))
         #    prev_net = starting_ip
@@ -3234,7 +3238,7 @@ def fetch_ip_data():
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
+    parser=argparse.ArgumentParser(
         description="Generate proxy auto-config rules.")
     parser.add_argument('-x', '--proxy',
                         dest='proxy',
@@ -3257,6 +3261,6 @@ if __name__ == '__main__':
                         nargs='?',
                         help="Pac Server Port [OPTIONAL], examples: 8970")
 
-    args = parser.parse_args()
+    args=parser.parse_args()
     generate_pac(args.proxy, args.iproxy)
     pac_server(int(args.port))
