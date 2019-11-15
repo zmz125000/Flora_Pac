@@ -45,5 +45,5 @@ jobs:
             python flora_pac
             git config user.email "zlx220000@msn.com"
             git config user.name "zmz125000"
-            git commit -m "update pac [ci skip]"
+            git commit -a -m "update pac [ci skip]"
             git push origin master
