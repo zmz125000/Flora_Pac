@@ -2,7 +2,7 @@
 #
 # Check https://circleci.com/docs/2.0/language-python/ for more details
 #
-version: 2.1
+version: 2
 jobs:
   build:
     docker:
@@ -42,7 +42,6 @@ jobs:
       - run:
           name: update pac files
           command: |
-            . venv/bin/activate
             python flora_pac
             git config user.email "zlx220000@msn.com"
             git config user.name "zmz125000"
