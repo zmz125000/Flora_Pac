@@ -4,13 +4,18 @@
 # Based on chnroutes project (by Numb.Majority@gmail.com)
 
 import re
-import urllib2
+import urllib.request
+import urllib.error
+import urllib.parse
 import argparse
 import math
 import socket
 import struct
+from shutil import move
 from jsmin import jsmin
 from datetime import date
+from os import fdopen, remove
+from tempfile import mkstemp
 
 
 def ip2long(ip):
@@ -19,18 +24,18 @@ def ip2long(ip):
 
 
 def generate_pac(proxy, iproxy):
-    results  = fetch_ip_data()
+    results = fetch_ip_data()
     fake_ip_results = fake_ip_data()
-    pacfile  = 'flora_pac.pac'
-    pacfile_min  = 'flora_pac_min.pac'
-    rfile    = open(pacfile, 'w')
-    rmfile    = open(pacfile_min, 'w')
+    pacfile = 'flora_pac.pac'
+    pacfile_min = 'flora_pac_min.pac'
+    rfile = open(pacfile, 'w')
+    rmfile = open(pacfile_min, 'w')
 
     def ip(item):
         return item[0]
 
-    results = sorted(results, key = ip)
-    fake_ip_results = sorted(fake_ip_results, key = ip)
+    results = sorted(results, key=ip)
+    fake_ip_results = sorted(fake_ip_results, key=ip)
 
     hashlist = []
     hashline = 0
@@ -39,12 +44,12 @@ def generate_pac(proxy, iproxy):
         ip_hashed = """
         ["""
         intLines = 0
-        for ip,mask,_ in results:
+        for ip, mask, _ in results:
             if ((ip & 0xff000000) % 255 == i):
                 if intLines > 0:
                     ip_hashed = ip_hashed + ','
                 ip_hashed = ip_hashed + """
-                [%d, %d]"""%(ip, mask)
+                [%d, %d]""" % (ip, mask)
                 intLines = intLines + 1
         ip_hashed = ip_hashed + """
         ]"""
@@ -58,12 +63,12 @@ def generate_pac(proxy, iproxy):
         fakeip_hashed = """
         ["""
         intLines = 0
-        for ip,mask in fake_ip_results:
+        for ip, mask in fake_ip_results:
             if (ip % 10 == i):
                 if intLines > 0:
                     fakeip_hashed = fakeip_hashed + ','
                 fakeip_hashed = fakeip_hashed + """
-                [%d, %d]"""%(ip, mask)
+                [%d, %d]""" % (ip, mask)
                 intLines = intLines + 1
         fakeip_hashed = fakeip_hashed + """
         ]"""
@@ -71,36 +76,32 @@ def generate_pac(proxy, iproxy):
         hashfakelist.append(fakeip_hashed)
 
 
+# get yy-mm-dd
+        datetimestr = str(date.today())
 
-
-
-#get yy-mm-dd
-	datetimestr = str(date.today())
-	
-	strLines = """// Last Modified: """ + datetimestr + """
+        strLines = """// Last Modified: """ + datetimestr + """
 	"""
-	
 
     strLines = strLines + """
     var hasOwnProperty = Object.hasOwnProperty;
     var iproxy ='%s';
     var out_gfw_proxy = '%s';
-    var list = ["""%(iproxy, proxy)
+    var list = [""" % (iproxy, proxy)
     intLines = 0
     for iplist in hashlist:
-      if intLines > 0:
-        strLines = strLines + ','
-      intLines = intLines + 1
-      strLines = strLines + iplist
+        if intLines > 0:
+            strLines = strLines + ','
+        intLines = intLines + 1
+        strLines = strLines + iplist
     strLines = strLines + """
     ];
     var fake_ip_list = ["""
     intLines = 0
     for fakelist in hashfakelist:
-      if intLines > 0:
-        strLines = strLines + ','
-      intLines = intLines + 1
-      strLines = strLines + fakelist
+        if intLines > 0:
+            strLines = strLines + ','
+        intLines = intLines + 1
+        strLines = strLines + fakelist
     strLines = strLines + """
     ];
         var safeDomains = {
@@ -3062,26 +3063,80 @@ def generate_pac(proxy, iproxy):
         pac_min = jsmin(js_file.read())
         rmfile.write(pac_min)
         rmfile.close()
-
-    print ("Rules: %d items.\n"
+    create_additional_pac()
+    print(("Rules: %d items.\n"
            "Usage: Use the newly created %s as your web browser's automatic "
-           "PAC(Proxy auto-config) file."%(hashline, pacfile))
+           "PAC(Proxy auto-config) file." % (hashline, pacfile)))
+
+
+def create_additional_pac():
+    orig_proxy = ''
+    orig_iproxy = ''
+
+    with open('flora_pac.pac') as file:
+        for line in file:
+            if 'out_gfw_proxy' in line:
+                match = re.search('\'(.+?)\'', line)
+                if match is not None:
+                    orig_proxy = match.group(0)
+            else:
+                continue
+            break
+    with open('flora_pac.pac') as file:
+        for line in file:
+            if 'iproxy' in line:
+                match = re.search('\'(.+?)\'', line)
+                if match is not None:
+                    orig_iproxy = match.group(0)
+            else:
+                continue
+            break
+
+    # create flora_pac_http.pac
+    fh, abs_path = mkstemp()
+    with fdopen(fh, 'w') as new_file:
+        with open('flora_pac.pac') as old_file:
+            for line in old_file:
+                if 'var out_gfw_proxy' in line:
+                    new_file.write(line.replace('SOCKS5', 'PROXY'))
+                else:
+                    new_file.write(line)
+
+    move(abs_path, 'flora_pac_http.pac')
+
+    # create flora_pac_reverse.pac
+    fh, abs_path = mkstemp()
+    with fdopen(fh, 'w') as new_file:
+        with open('flora_pac.pac') as old_file:
+            for line in old_file:
+                if 'var out_gfw_proxy' in line:
+                    new_file.write(line.replace(orig_proxy, orig_iproxy))
+                    continue
+                if 'var iproxy' in line:
+                    new_file.write(line.replace(orig_iproxy, orig_proxy))
+                    continue
+                else:
+                    new_file.write(line)
+
+    move(abs_path, 'flora_pac_reverse.pac')
 
 
 def pac_server(port):
     if port <= 0:
         return
-    import SimpleHTTPServer
-    import BaseHTTPServer
-    class DefaultHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+    import http.server
+    import http.server
+
+    class DefaultHandler(http.server.SimpleHTTPRequestHandler):
         def do_GET(self):
             if self.path == '/':
                 self.path = '/flora_pac.pac'
-            return SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self)
-    httpd = BaseHTTPServer.HTTPServer(('0.0.0.0', port), DefaultHandler)
-    print "PAC is now serving at: 0.0.0.0:%d"%(port)
-    print "Check it out with: $ curl http://127.0.0.1:%d"%(port)
+            return http.server.SimpleHTTPRequestHandler.do_GET(self)
+    httpd = http.server.HTTPServer(('0.0.0.0', port), DefaultHandler)
+    print("PAC is now serving at: 0.0.0.0:%d" % (port))
+    print("Check it out with: $ curl http://127.0.0.1:%d" % (port))
     httpd.serve_forever()
+
 
 def fake_ip_data():
     fakeIps = [
@@ -3130,77 +3185,77 @@ def fake_ip_data():
         fake_ip_int.append((ip2long(item), ip2long('255.255.255.255')))
     return fake_ip_int
 
+
 def fetch_ip_data():
-    #fetch data from apnic
-    print "Fetching data from apnic.net, it might take a few minutes, please wait..."
-    url=r'http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest'
-    data=urllib2.urlopen(url).read()
+    # fetch data from apnic
+    print("Fetching data from apnic.net, it might take a few minutes, please wait...")
+    url = r'http://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest'
+    data = urllib.request.urlopen(url).read().decode('utf-8')
     #f = open("ip.txt")
     #data = f.read()
 
-    cnregex=re.compile(r'apnic\|cn\|ipv4\|[0-9\.]+\|[0-9]+\|[0-9]+\|a.*',re.IGNORECASE)
-    cndata=cnregex.findall(data)
+    cnregex = re.compile(
+        r'apnic\|cn\|ipv4\|[0-9\.]+\|[0-9]+\|[0-9]+\|a.*', re.IGNORECASE)
+    cndata = cnregex.findall(data)
 
-    results=[]
-    prev_net=''
+    results = []
+    prev_net = ''
 
     for item in cndata:
-        unit_items=item.split('|')
-        starting_ip=unit_items[3]
-        num_ip=int(unit_items[4])
+        unit_items = item.split('|')
+        starting_ip = unit_items[3]
+        num_ip = int(unit_items[4])
 
-        imask=0xffffffff^(num_ip-1)
-        #convert to string
-        imask=hex(imask)[2:]
-        mask=[0]*4
-        mask[0]=imask[0:2]
-        mask[1]=imask[2:4]
-        mask[2]=imask[4:6]
-        mask[3]=imask[6:8]
+        imask = 0xffffffff ^ (num_ip-1)
+        # convert to string
+        imask = hex(imask)[2:]
+        mask = [0]*4
+        mask[0] = imask[0:2]
+        mask[1] = imask[2:4]
+        mask[2] = imask[4:6]
+        mask[3] = imask[6:8]
 
-        #convert str to int
-        mask=[ int(i,16 ) for i in mask]
-        mask="%d.%d.%d.%d"%tuple(mask)
+        # convert str to int
+        mask = [int(i, 16) for i in mask]
+        mask = "%d.%d.%d.%d" % tuple(mask)
 
-        #mask in *nix format
-        mask2=32-int(math.log(num_ip,2))
+        # mask in *nix format
+        mask2 = 32-int(math.log(num_ip, 2))
 
-        ip=starting_ip.split('.')
+        ip = starting_ip.split('.')
         #ip[2] = '0'
         #ip[3] = '0'
         starting_ip = '.'.join(ip)
-        #if starting_ip != prev_net:
+        # if starting_ip != prev_net:
         results.append((ip2long(starting_ip), ip2long(mask), mask2))
         #    prev_net = starting_ip
-
-
 
     return results
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Generate proxy auto-config rules.")
+    parser = argparse.ArgumentParser(
+        description="Generate proxy auto-config rules.")
     parser.add_argument('-x', '--proxy',
-                        dest    = 'proxy',
-                        default = 'SOCKS5 127.0.0.1:1080',
-                        nargs   = '?',
-                        help    = "Proxy Server, examples: "
-                                  "SOCKS5 127.0.0.1:8964; "
-                                  "SOCKS 127.0.0.1:8964; "
-                                  "PROXY 127.0.0.1:6489")
+                        dest='proxy',
+                        default='SOCKS5 127.0.0.1:1080',
+                        nargs='?',
+                        help="Proxy Server, examples: "
+                        "SOCKS5 127.0.0.1:8964; "
+                        "SOCKS 127.0.0.1:8964; "
+                        "PROXY 127.0.0.1:6489")
 
     parser.add_argument('-i', '--iproxy',
-                        dest    = 'iproxy',
-                        default = 'DIRECT',
-                        nargs   = '?',
-                        help    = "Internal Proxy Server, for some internal network which have to set a proxy for internet access")
+                        dest='iproxy',
+                        default='DIRECT',
+                        nargs='?',
+                        help="Internal Proxy Server, for some internal network which have to set a proxy for internet access")
 
     parser.add_argument('-p', '--port',
-                        dest    = 'port',
-                        default = '0',
-                        nargs   = '?',
-                        help    = "Pac Server Port [OPTIONAL], examples: 8970")
-
+                        dest='port',
+                        default='0',
+                        nargs='?',
+                        help="Pac Server Port [OPTIONAL], examples: 8970")
 
     args = parser.parse_args()
     generate_pac(args.proxy, args.iproxy)
