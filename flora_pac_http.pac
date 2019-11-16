@@ -1,8 +1,8 @@
 // Last Modified: 2019-11-16 02:39:20.580260
 	
     var hasOwnProperty = Object.hasOwnProperty;
-    var iproxy ='SOCKS5 127.0.0.1:1080';
-    var out_gfw_proxy = 'DIRECT';
+    var iproxy ='DIRECT';
+    var out_gfw_proxy = 'PROXY 127.0.0.1:1080';
     var list = [
         [
         ],
