@@ -4,6 +4,8 @@ jobs:
     docker:
       - image: circleci/python:3.6.8
 
+    working_directory: ~/Flora_Pac
+
     steps:
       - add_ssh_keys:
           fingerprints:
