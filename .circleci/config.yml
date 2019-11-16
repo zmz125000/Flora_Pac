@@ -50,7 +50,4 @@ workflows:
 
   build-on-push:
     jobs:
-      - build:
-          filters:
-            branches:
-              only: master
+      - build
