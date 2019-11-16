@@ -3102,7 +3102,7 @@ def create_additional_pac():
                     match = re.search(r'(?:\')(\S+)(?:\s)', line)
                     if match:
                         proxy = match.group(1)
-                    new_file.write(line.replace('SOCKS5', 'PROXY'))
+                    new_file.write(line.replace(proxy, 'PROXY'))
                 else:
                     new_file.write(line)
 
