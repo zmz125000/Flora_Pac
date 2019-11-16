@@ -43,5 +43,14 @@ workflows:
             branches:
               only:
                 - master
+
+      -
     jobs:
       - build
+
+  build-on-push:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only: master
