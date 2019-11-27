@@ -3203,7 +3203,6 @@ def fetch_ip_data():
     cndata=cnregex.findall(data)
 
     results=[]
-    prev_net=''
 
     for item in cndata:
         unit_items=item.split('|')
