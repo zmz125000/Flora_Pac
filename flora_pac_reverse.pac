@@ -1,4 +1,4 @@
-// Last Modified: 2025-12-28 00:04:35.452289
+// Last Modified: 2026-01-04 00:04:28.494169
 	
     var hasOwnProperty = Object.hasOwnProperty;
     var iproxy ='SOCKS5 127.0.0.1:1080';
